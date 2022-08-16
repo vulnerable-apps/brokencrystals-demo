@@ -296,7 +296,7 @@ it('should not contain possibility to server-side code execution', async () => {
       tests: [TestType.SSTI],
       attackParamLocations: [AttackParamLocation.BODY]
     })
-    .timeout(timeout)
+    .timeout(300000)
     .threshold(Severity.HIGH)
     .run({
       method: 'POST',
