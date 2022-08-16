@@ -147,38 +147,12 @@ Ran all test suites matching /render.e2e-spec.ts/i.
 
 Now you will look under the hood to see how this all works. In the following example, we will test the app we just set up for any instances of Server Side Template Injection. [Jest](https://github.com/facebook/jest) is provided as the testing framework, that provides assert functions and test-double utilities that help with mocking, spying, etc.
 
-To start the webserver within the same process with tests, not in a remote environment or container, we use Nest.js [testing utilities](https://docs.nestjs.com/fundamentals/testing#testing-utilities). You don’t have to use Nest.js, but it is what we chose for this project. The code is as follows:
-
-[`test/sec/users.e2e-spec.ts`](./test/sec/users.e2e-spec.ts)
-
-```ts
-import { UsersModule } from '../../src/users';
-import config from '../../src/mikro-orm.config';
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { MikroOrmModule } from '@mikro-orm/nestjs';
-
-describe('/users', () => {
-  let app!: INestApplication;
-
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [UsersModule, MikroOrmModule.forRoot(config)]
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-  });
-
-  afterAll(() => app.close());
-});
-```
-
 The [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) package provides a set of utilities that allows scanning the demo application for vulnerabilities. Let's expand the previous example using the built-in `SecRunner` class:
+
+[`test/sec/users.e2e-spec.ts`](./test/sec/render.e2e-spec.ts)
 
 ```ts
 let runner!: SecRunner;
-let app!: INestApplication;
 
 // ...
 
@@ -209,75 +183,51 @@ The runner is now ready to perform your tests. To start scanning your endpoint, 
 
 Now, you will write and run your first unit test!
 
-Let's verify the `GET /users/:id` endpoint for SQLi:
+Let's verify the `POST /api/render` endpoint for SSTI:
 
 ```ts
-describe('GET /:id', () => {
-  it('should not have SQLi', async () => {
+describe('POST /render', () => {
+  it('should not contain possibility to server-side code execution', async () => {
     await runner
       .createScan({
-        tests: [TestType.SQLI]
+        tests: [TestType.SSTI]
       })
       .run({
         method: 'GET',
-        url: `${baseUrl}/users/1`
+        headers: {
+          'accept': 'application/json, text/plain, */*',
+          'origin': process.env.BROKEN_CRYSTALS_URL!,
+          'content-type': 'text/plain'
+        },
+        body: `Some text`,
+        url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
       });
   });
 });
 ```
 
-This will raise an exception when the test fails, with remediation information and a deeper explanation of SQLi, right in your command line!
+This will raise an exception when the test fails, with remediation information and a deeper explanation of SSTI, right in your command line!
 
-Let's look at another test for the `POST /users` endpoint, this time for XSS.
+Let's look at another test for the `GET /api/spawn` endpoint, this time for OSI.
 
 ```ts
-describe('POST /', () => {
-  it('should not have XSS', async () => {
+describe('GET /spawn', () => {
+  it('should not be able to execute shell commands on the host operating system', async () => {
     await runner
       .createScan({
-        tests: [TestType.XSS]
+        tests: [TestType.OSI]
       })
       .run({
-        method: 'POST',
-        url: `${baseUrl}/users`,
-        body: { firstName: 'Test', lastName: 'Test' }
+        method: 'GET',
+        url: `${process.env.BROKEN_CRYSTALS_URL}/api/spawn?command=pwd`
       });
   });
 });
 ```
 
-As you can see, writing a new test for XSS follows the same pattern as SQLi.
+As you can see, writing a new test for OSI follows the same pattern as SSTI.
 
-Finally, to run a scan against the endpoint, you have to obtain a port to which the server listens. For that, we should adjust the example above just a bit:
-
-```ts
-let runner!: SecRunner;
-let app!: INestApplication;
-let baseUrl!: string;
-
-beforeAll(async () => {
-  // ...
-
-  const server = app.getHttpServer();
-
-  server.listen(0);
-
-  const port = server.address().port;
-  const protocol = app instanceof Server ? 'https' : 'http';
-  baseUrl = `${protocol}://localhost:${port}`;
-});
-```
-
-Now, you can use the `baseUrl` to set up a target:
-
-```ts
-await scan.run({
-  method: 'GET',
-  url: `${baseUrl}/users/1`
-});
-```
-
-By default, each found issue will cause the scan to stop. To control this behavior you can set a severity threshold using the `threshold` method. Since SQLi (SQL injection) is considered to be high severity issue, we can pass `Severity.HIGH` for stricter checks:
+By default, each found issue will cause the scan to stop. To control this behavior you can set a severity threshold using the `threshold` method. Since SSTI (Server Side Template Injection) is considered to be high severity issue, we can pass `Severity.HIGH` for stricter checks:
 
 ```ts
 scan.threshold(Severity.HIGH);
@@ -297,17 +247,34 @@ jest.setTimeout(300000);
 
 To clarify an attack surface and speed up the test, we suggest making clear where to discover parameters according to the source code.
 
-[`src/users/users.service.ts`](./src/users/users.service.ts)
+[`src/app.controller.ts`](https://github.com/NeuraLegion/brokencrystals/blob/master/src/app.controller.ts)
 
 ```ts
-@Controller('users')
-export class UsersController {
+@Controller('/api')
+@ApiTags('App controller')
+export class AppController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get(':id')
-  public findOne(@Param('id') id: number): Promise<User | null> {
-    return this.usersService.findOne(id);
+  @Post('render')
+  @ApiProduces('text/plain')
+  @ApiConsumes('text/plain')
+  @ApiOperation({
+    description: SWAGGER_DESC_RENDER_REQUEST
+  })
+  @ApiBody({ description: 'Write your text here' })
+  @ApiCreatedResponse({
+    description: 'Rendered result'
+  })
+  async renderTemplate(@Body() raw): Promise<string> {
+    if (typeof raw === 'string' || Buffer.isBuffer(raw)) {
+      const text = raw.toString().trim();
+      const res = dotT.compile(text)();
+      this.logger.debug(`Rendered template: ${res}`);
+      return res;
+    }
   }
+
+  // ...
 }
 ```
 
@@ -315,110 +282,73 @@ For the example above, it should look like this:
 
 ```ts
 const scan = runner.createScan({
-  tests: [TestType.SQLI],
-  attackParamLocations: [AttackParamLocation.PATH]
+  tests: [TestType.SSTI],
+  attackParamLocations: [AttackParamLocation.BODY]
 });
 ```
 
 Finally, the test should look like this:
 
 ```ts
-it('should not have SQLi', async () => {
+it('should not contain possibility to server-side code execution', async () => {
   await runner
     .createScan({
-      tests: [TestType.SQLI],
-      attackParamLocations: [AttackParamLocation.PATH]
+      tests: [TestType.SSTI],
+      attackParamLocations: [AttackParamLocation.BODY]
     })
-    .threshold(Severity.MEDIUM)
-    .timeout(300000)
+    .timeout(timeout)
+    .threshold(Severity.HIGH)
     .run({
-      method: 'GET',
-      url: `${baseUrl}/users/1`
+      method: 'POST',
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'origin': process.env.BROKEN_CRYSTALS_URL!,
+        'content-type': 'text/plain'
+      },
+      body: `Some text`,
+      url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
     });
 });
 ```
 
-Here is a completed `test/sec/users.e2e-spec.ts` file with all the tests and configuration set up.
+Here is a completed `test/sec/render.e2e-spec.ts` file with all the tests and configuration set up.
 
 ```ts
-import { UsersModule } from '../../src/users';
-import config from '../../src/mikro-orm.config';
 import { SecRunner } from '@sectester/runner';
-import { AttackParamLocation, Severity, TestType } from '@sectester/scan';
-import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigModule } from '@nestjs/config';
-import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { Server } from 'https';
+import { AttackParamLocation, TestType } from '@sectester/scan';
 
-describe('/users', () => {
+describe('/api', () => {
   const timeout = 300000;
   jest.setTimeout(timeout);
-
   let runner!: SecRunner;
-  let app!: INestApplication;
-  let baseUrl!: string;
 
-  beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        UsersModule,
-        ConfigModule.forRoot(),
-        MikroOrmModule.forRoot(config)
-      ]
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    const server = app.getHttpServer();
-
-    server.listen(0);
-
-    const port = server.address().port;
-    const protocol = app instanceof Server ? 'https' : 'http';
-    baseUrl = `${protocol}://localhost:${port}`;
-  });
-
-  afterAll(() => app.close());
-
-  beforeEach(async () => {
+  beforeEach(() => {
     runner = new SecRunner({ hostname: process.env.BRIGHT_HOSTNAME! });
 
-    await runner.init();
+    return runner.init();
   });
 
   afterEach(() => runner.clear());
 
-  describe('POST /', () => {
-    it('should not have XSS', async () => {
+  describe('POST /render', () => {
+    it('should not contain possibility to server-side code execution', async () => {
       await runner
         .createScan({
-          tests: [TestType.XSS],
+          tests: [TestType.SSTI],
+          name: expect.getState().currentTestName,
           attackParamLocations: [AttackParamLocation.BODY]
         })
-        .threshold(Severity.MEDIUM)
         .timeout(timeout)
+        .threshold(Severity.HIGH)
         .run({
           method: 'POST',
-          url: `${baseUrl}/users`,
-          body: { firstName: 'Test', lastName: 'Test' }
-        });
-    });
-  });
-
-  describe('GET /:id', () => {
-    it('should not have SQLi', async () => {
-      await runner
-        .createScan({
-          tests: [TestType.SQLI],
-          attackParamLocations: [AttackParamLocation.PATH]
-        })
-        .threshold(Severity.MEDIUM)
-        .timeout(timeout)
-        .run({
-          method: 'GET',
-          url: `${baseUrl}/users/1`
+          headers: {
+            'accept': 'application/json, text/plain, */*',
+            'origin': process.env.BROKEN_CRYSTALS_URL!,
+            'content-type': 'text/plain'
+          },
+          body: `Some text`,
+          url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
         });
     });
   });
@@ -480,10 +410,15 @@ steps:
   - name: Run sec tests
     run: npm run test:sec
     env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      KEYCLOAK_DB_USER: ${{ secrets.KEYCLOAK_DB_USER }}
+      KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
+      KEYCLOAK_USER: ${{ secrets.KEYCLOAK_USER }}
+      KEYCLOAK_PASSWORD: ${{ secrets.KEYCLOAK_PASSWORD }}
       BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
       BRIGHT_HOSTNAME: app.neuralegion.com
+      BROKEN_CRYSTALS_URL: http://localhost:3000
 ```
 
 For a full list of CI configuration examples, check out the docs below.
