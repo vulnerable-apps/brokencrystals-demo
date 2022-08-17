@@ -45,7 +45,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:sec": "jest --config test/jest-e2e.config.js test/sec"
+    "test:sec": "jest --config test/jest-e2e.config.js --runInBand test/sec"
   },
   "homepage": "https://github.com/NeuraLegion/sectester-js-demo-broken-crystals#readme",
   "devDependencies": {
