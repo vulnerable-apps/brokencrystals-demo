@@ -149,7 +149,7 @@ Now you will look under the hood to see how this all works. In the following exa
 
 The [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) package provides a set of utilities that allows scanning the demo application for vulnerabilities. Let's expand the previous example using the built-in `SecRunner` class:
 
-[`test/sec/users.e2e-spec.ts`](./test/sec/render.e2e-spec.ts)
+[`test/sec/render.e2e-spec.ts`](./test/sec/render.e2e-spec.ts)
 
 ```ts
 let runner!: SecRunner;
