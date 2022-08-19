@@ -7,13 +7,13 @@ services:
     healthcheck:
       interval: 5s
       retries: 10
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/config || kill 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/"]
       timeout: 30s
     environment:
       DATABASE_HOST: postgres
       DATABASE_SCHEMA: test
-      DATABASE_USER: '${POSTGRES_PASSWORD:-test}'
-      DATABASE_PASSWORD: '${POSTGRES_USER:-test}'
+      DATABASE_USER: '${POSTGRES_USER:-test}'
+      DATABASE_PASSWORD: '${POSTGRES_PASSWORD:-test}'
       KEYCLOAK_SERVER_URI: http://keycloak:8080/auth
     depends_on:
       - postgres
@@ -59,8 +59,8 @@ services:
     image: 'postgres:14-alpine'
     environment:
       POSTGRES_DB: keycloak
-      POSTGRES_PASSWORD: '${KEYCLOAK_DB_USER:-test}'
-      POSTGRES_USER: '${KEYCLOAK_DB_PASSWORD:-test}'
+      POSTGRES_PASSWORD: '${KEYCLOAK_DB_PASSWORD:-test}'
+      POSTGRES_USER: '${KEYCLOAK_DB_USER:-test}'
     healthcheck:
       interval: 10s
       retries: 10
@@ -87,10 +87,10 @@ services:
       DB_ADDR: keycloak-db
       DB_DATABASE: keycloak
       DB_SCHEMA: public
-      DB_PASSWORD: '${KEYCLOAK_DB_USER:-test}'
-      DB_USER: '${KEYCLOAK_DB_PASSWORD:-test}'
+      DB_PASSWORD: '${KEYCLOAK_DB_PASSWORD:-test}'
+      DB_USER: '${KEYCLOAK_DB_USER:-test}'
       KEYCLOAK_USER: '${KEYCLOAK_USER:-admin}'
-      KEYCLOAK_PASSWORD: '${KEYCLOAK_USER:-admin}'
+      KEYCLOAK_PASSWORD: '${KEYCLOAK_PASSWORD:-admin}'
       KEYCLOAK_IMPORT: /opt/jboss/keycloak/imports/realm-export.json -Dkeycloak.profile.feature.upload_scripts=enabled
     healthcheck:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:8080/auth/realms/master' ]

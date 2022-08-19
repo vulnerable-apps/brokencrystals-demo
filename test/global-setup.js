@@ -11,7 +11,7 @@ const expectApp = async ({ container, cwd }) => {
     '/dev/null',
     '--silent',
     '--retry',
-    10,
+    30,
     '--retry-delay',
     5,
     '--retry-connrefused',
