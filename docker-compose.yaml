@@ -46,8 +46,6 @@ services:
           'pg_isready -d test -U $${POSTGRES_USER}'
         ]
       timeout: 45s
-    ports:
-      - '5432:5432'
     volumes:
       - './conf/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql'
 
