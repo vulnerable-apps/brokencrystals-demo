@@ -5,9 +5,6 @@ on:
     branches:
       - master
 
-env:
-  DEPENDENCIES_CACHE: npm-cache
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -17,17 +14,10 @@ jobs:
           token: ${{ secrets.GPR_TOKEN }}
 
       - name: Set Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 16
-
-      - name: Cache npm modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ env.DEPENDENCIES_CACHE }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ env.DEPENDENCIES_CACHE }}-
+          cache: npm
 
       - name: Install deps in quiet mode
         run: npm ci -q

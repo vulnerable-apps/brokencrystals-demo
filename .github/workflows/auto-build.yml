@@ -1,12 +1,9 @@
-name: CI / Automated testing
+name: CI / Automated build
 
 on:
   pull_request:
     branches:
       - '**'
-
-env:
-  DEPENDENCIES_CACHE: npm-cache
 
 jobs:
   build-and-test:
@@ -16,17 +13,10 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 16
-
-      - name: Cache npm modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ env.DEPENDENCIES_CACHE }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ env.DEPENDENCIES_CACHE }}-
+          cache: npm
 
       - name: Install deps in quiet mode
         run: npm ci -q
