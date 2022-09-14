@@ -1,6 +1,7 @@
 {
   "name": "sectester-js-demo-broken-crystals",
   "version": "1.0.0",
+  "description": "This is a demo project for the SecTester JS SDK framework, with some installation and usage examples",
   "private": true,
   "repository": {
     "type": "git",

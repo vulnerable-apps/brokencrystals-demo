@@ -1,0 +1,37 @@
+name: CI / Automated testing
+
+on:
+  workflow_dispatch:
+
+  repository_dispatch:
+    types: [sectester]
+
+  schedule:
+    - cron: '30 3 * * sun'
+
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: npm
+
+      - name: Install deps in quiet mode
+        run: npm ci -q
+
+      - name: Run SecTester
+        run: npm run test:sec
+        env:
+          BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
+          BRIGHT_HOSTNAME: app.neuralegion.com
+          BROKEN_CRYSTALS_URL: http://localhost:3000

@@ -4,13 +4,18 @@
 
 - [About this project](#about-this-project)
 - [About SecTester](#about-sectester)
-- [Setup](#setup)
-  - [Fork and clone this repo](#fork-and-clone-this-repo)
+- [Initial setup](#initial-setup)
+  - [Fork this repo](#fork-this-repo)
   - [Get a Bright API key](#get-a-bright-api-key)
+- [A full configuration example](#a-full-configuration-example)
+- [Running in a CI pipeline](#running-in-a-ci-pipeline)
+  - [GitHub Actions setup](#github-actions-setup)
+  - [Using with GitHub Actions](#using-with-github-actions)
+- [Running on a local machine](#running-on-a-local-machine)
+  - [Local setup](#local-setup)
   - [Explore the demo application](#explore-the-demo-application)
-  - [A full configuration example](#a-full-configuration-example)
-  - [Recommended tests](#recommended-tests)
-  - [Example of a CI configuration](#example-of-a-ci-configuration)
+  - [Run tests locally on the demo application](#run-tests-locally-on-the-demo-application)
+- [Recommended tests](#recommended-tests)
 - [Documentation & Help](#documentation--help)
 - [Contributing](#contributing)
 - [License](#license)
@@ -39,12 +44,11 @@ Trying out Bright’s SecTester is _**free**_ 💸, so let’s get started!
 >
 > Thank you! We appreciate your help and feedback!
 
-## Setup
+## Initial setup
 
-### Fork and clone this repo
+### Fork this repo
 
 1.  Press the ‘fork’ button to make a copy of this repo in your own GH account
-2.  In your forked repo, clone this project down to your local machine using either SSH or HTTP
 
 ### Get a Bright API key
 
@@ -52,100 +56,15 @@ Trying out Bright’s SecTester is _**free**_ 💸, so let’s get started!
 2.  Optional: Skip the quickstart wizard and go directly to [**User API key creation**](https://app.neuralegion.com/profile)
 3.  Create a Bright API key ([**check out our doc on how to create a user key**](https://docs.brightsec.com/docs/manage-your-personal-account#manage-your-personal-api-keys-authentication-tokens))
 4.  Save the Bright API key
-    1.  We recommend using your Github repository secrets feature to store the key, accessible via the `Settings > Security > Secrets > Actions` configuration. We use the ENV variable called `BRIGHT_TOKEN` in our examples
+    1.  For this demo, we recommend using your Github repository secrets feature to store the key, accessible via the `Settings > Security > Secrets > Actions` configuration. We use the ENV variable called `BRIGHT_TOKEN` in our examples
     2.  If you don’t use that option, make sure you save the key in a secure location. You will need to access it later on in the project but will not be able to view it again.
     3.  More info on [**how to use ENV vars in Github actions**](https://docs.github.com/en/actions/learn-github-actions/environment-variables)
 
 > ⚠️ Make sure your API key is saved in a location where you can retrieve it later! You will need it in these next steps!
 
-### Explore the demo application
+## A full configuration example
 
-Navigate to your local version of this project. Then, in your command line, install the dependencies:
-
-```bash
-$ npm ci
-```
-
-The whole list of required variables to start the demo application is described in `.env.example` file. The template for this .env file is available in the root folder.
-
-After that, you can easily create a `.env` file from the template by issuing the following command:
-
-```bash
-$ cp .env.example .env
-```
-
-Once this template is done, copying over (should be instantaneous), navigate to your `.env` file, and paste your Bright API key as the value of the `BRIGHT_TOKEN` variable.
-
-```text
-BRIGHT_TOKEN = <your_API_key_here>
-```
-
-Finally, you have to build and run services with Docker. Start Docker, and issue the command as follows:
-
-```bash
-$ docker compose up -d
-```
-
-While having the application running, open a browser and type `http://localhost:3000/swagger`, and hit enter.
-You should see the Swagger UI page for that application that allows you to test the RESTFul CRUD API, like in the following screenshot:
-
-![Swagger UI](https://user-images.githubusercontent.com/38690835/184880272-0ec59ac0-e200-454d-ae24-6deba4ec9a2e.png)
-
-To explore the Swagger UI:
-
-- Click on the `POST /api/render` endpoint
-- Click on the "Try it out" button
-- Click on the blue "Execute" button
-- Then you should see a view similar to the following, where you can see the JSON returned from the API:
-
-![Swagger UI](https://user-images.githubusercontent.com/38690835/184880763-e683ccf4-fc75-4b53-a305-4b1c1ba18ba2.png)
-
-Then you can start tests with SecTester against these endpoints as follows (make sure you use a new terminal window, as the original is still running the API for us!)
-
-```bash
-$ npm run test:sec
-```
-
-> You will find tests written with SecTester in the `./test/sec` folder.
-
-This can take a few minutes, and then you should see the result, like in the following screenshot:
-
-```text
- FAIL  test/sec/render.e2e-spec.ts (143.608 s)
-  /api
-    POST /render
-      ✕ should not contain possibility to server-side code execution (282227 ms)
-
-  ● /api › POST /render › should not contain possibility to server-side code execution
-
-    IssueFound: Target is vulnerable
-
-    Issue in Bright UI:   https://development.playground.neuralegion.com/scans/bH2vd1CfxHtKjLNLxw94oj/issues/w68hhVa1We95UNZx4FmefT
-    Name:                 SSTI - Server Side Template Injection
-    Severity:             High
-    Remediation:
-    To protect against this type of attack, you shall sanitize input before passing to template directive and create a safe environment.
-    Details:
-    SSTI (Server Side Template Injection) is vulnerability that is exploited by malformed user input which allows embedding user input into different application without proper sanitization. The highest possibility of this vulnerability is to create a path for remote code execution capabilities and be exploited by malicious subjects. Identification of this vulnerability is possible with observation of the invalid syntax in the input with an error messages displayed after creating a response.
-    References:
-     ● https://www.owasp.org/index.php/Server-Side_Includes_(SSI)_Injection
-     ● https://www.owasp.org/images/7/7e/Owasp_SSTI_final.pdf
-
-      at SecScan.assert (../packages/runner/src/lib/SecScan.ts:59:13)
-          at runMicrotasks (<anonymous>)
-      at SecScan.run (../packages/runner/src/lib/SecScan.ts:37:7)
-      at Object.<anonymous> (sec/render.e2e-spec.ts:21:7)
-
-Test Suites: 1 failed, 1 total
-Tests:       1 failed, 1 total
-Snapshots:   0 total
-Time:        143.677 s
-Ran all test suites matching /render.e2e-spec.ts/i.
-```
-
-### A full configuration example
-
-Now you will look under the hood to see how this all works. In the following example, we will test the app we just set up for any instances of Server Side Template Injection. [Jest](https://github.com/facebook/jest) is provided as the testing framework, that provides assert functions and test-double utilities that help with mocking, spying, etc.
+Let’s look under the hood to see how this all works. In the following example, we will test the app we just set up for any instances of Server Side Template Injection. [Jest](https://github.com/facebook/jest) is provided as the testing framework, that provides assert functions and test-double utilities that help with mocking, spying, etc.
 
 The [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) package provides a set of utilities that allows scanning the demo application for vulnerabilities. Let's expand the previous example using the built-in `SecRunner` class:
 
@@ -193,7 +112,7 @@ describe('POST /render', () => {
         tests: [TestType.SSTI]
       })
       .run({
-        method: 'GET',
+        method: 'POST',
         headers: {
           'accept': 'application/json, text/plain, */*',
           'origin': process.env.BROKEN_CRYSTALS_URL!,
@@ -357,7 +276,252 @@ describe('/api', () => {
 
 Full documentation can be found in the [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) README.
 
-### Recommended tests
+## Running in a CI pipeline
+
+Once you create your own unit tests using [SecTester](https://github.com/NeuraLegion/sectester-js), you can run it in any CI you choose, to simplify things in this demo we provide an example using the GitHub Actions CI.
+
+### GitHub Actions setup
+
+1.  After forking the main repo, you will need to go to the `Actions` tab and click on the `I understand my workflows, go ahead an enable them` button. This will enable you to run the pre-configured CI example from this demo
+2.  Next, add your `BRIGHT_TOKEN` to the GitHub Actions environment variables via the [Secret Variables](https://docs.github.com/en/actions/reference/encrypted-secrets), accessible via the `Settings > Security > Secrets > Actions` configuration. Please make sure that the ENV variable is called `BRIGHT_TOKEN` as that is what we use in our example
+
+> You can integrate this library into any CI you use, for that you will need to add the `BRIGHT_TOKEN` ENV vars to your CI.
+
+### Using with GitHub Actions
+
+The following is a minimal configuration for starting [SecTester](https://github.com/NeuraLegion/sectester-js), which is running on the latest LTS version of Node and triggers only when a pull request is opened.
+
+As you can see, the workflow creates a test [job](https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow) that runs SecTester only after all dependencies are installed:
+
+[`.github/workflows/auto-test.yml`](.github/workflows/auto-test.yml)
+
+```yaml
+name: CI / Automated testing
+
+on:
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    name: Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
+          cache: npm
+
+      - name: Install deps in quiet mode
+        run: npm ci -q
+
+      - name: Run SecTester
+        run: npm run test:sec
+        env:
+          BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
+          BRIGHT_HOSTNAME: app.neuralegion.com
+          BROKEN_CRYSTALS_URL: http://localhost:3000
+```
+
+The whole list of environment variables to start the demo application is described in `.env.example` file. However, you can start with the minimal three VARs, as shown in the example above, ignoring others.
+
+In the example above, the CI flow is set to run all the SecTester tests, but if we would like to run a single test we can update the workflow by specifying a regex pattern that matches a test name, as follows:
+
+```yaml
+- name: Run SecTester
+  run: npm run test:sec -- -t 'testimonials'
+  env:
+    BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
+    BRIGHT_HOSTNAME: app.neuralegion.com
+    BROKEN_CRYSTALS_URL: http://localhost:3000
+```
+
+Furthermore, to trigger SecTester on demand, you can use [Manual Triggers](https://github.blog/changelog/2020-07-06-github-actions-manual-triggers-with-workflow_dispatch/) for GitHub Actions as follows:
+
+```yaml
+name: CI / Automated testing
+
+on:
+  workflow_dispatch:
+```
+
+You will then see a `Run workflow` button on the Actions tab, enabling you to easily trigger a run.
+
+You can also use the [repository_dispatch](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#repository_dispatch) event to have control on when to start a workflow by making an HTTP request:
+
+```yaml
+name: CI / Automated testing
+
+on:
+  repository_dispatch:
+    types: [sectester]
+```
+
+To trigger a workflow, issue the following command using a [Personal Access Tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token):
+
+```bash
+$ curl -H "Accept: application/vnd.github.everest-preview+json" \
+  -H "Authorization: token ${GITHUB_TOKEN}" \
+  https://api.github.com/repos/[org-name-or-username]/[repository]/dispatches \
+  -d '{ "event_type": "sectester" }'
+```
+
+Finally, you may find useful to trigger a workflow at a scheduled time using the [schedule](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule) event.
+
+This example triggers the workflow every Sunday at 03:30 UTC:
+
+```yaml
+name: CI / Automated testing
+
+on:
+  schedule:
+    - cron: '30 3 * * sun'
+```
+
+> `*` is a special character in YAML, so you have to quote this string
+
+Once the CI runs and a SecTester test fails, this means a vulnerability was found and the output will look as follows:
+
+```text
+FAIL  test/sec/render.e2e-spec.ts (143.608 s)
+  /api
+    POST /render
+      ✕ should not contain possibility to server-side code execution (282227 ms)
+
+  ● /api › POST /render › should not contain possibility to server-side code execution
+
+    IssueFound: Target is vulnerable
+
+    Issue in Bright UI:   https://development.playground.neuralegion.com/scans/bH2vd1CfxHtKjLNLxw94oj/issues/w68hhVa1We95UNZx4FmefT
+    Name:                 SSTI - Server Side Template Injection
+    Severity:             High
+    Remediation:
+    To protect against this type of attack, you shall sanitize input before passing to template directive and create a safe environment.
+    Details:
+    SSTI (Server Side Template Injection) is vulnerability that is exploited by malformed user input which allows embedding user input into different application without proper sanitization. The highest possibility of this vulnerability is to create a path for remote code execution capabilities and be exploited by malicious subjects. Identification of this vulnerability is possible with observation of the invalid syntax in the input with an error messages displayed after creating a response.
+    References:
+     ● https://www.owasp.org/index.php/Server-Side_Includes_(SSI)_Injection
+     ● https://www.owasp.org/images/7/7e/Owasp_SSTI_final.pdf
+
+      at SecScan.assert (../packages/runner/src/lib/SecScan.ts:59:13)
+          at runMicrotasks (<anonymous>)
+      at SecScan.run (../packages/runner/src/lib/SecScan.ts:37:7)
+      at Object.<anonymous> (sec/render.e2e-spec.ts:21:7)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        143.677 s
+Ran all test suites matching /render.e2e-spec.ts/i.
+```
+
+## Running on a local machine
+
+Alternatively to running the tests in the CI, you can run the tests locally on your machine, this is helpful for example if you want to run the tests while you’re working on your code and not consume CI resources.
+
+### Local setup
+
+To begin, clone your forked repo of this project onto your local machine.
+
+To do that, navigate to your in your folder of choice and clone the project using either SSH or HTTP, for example using the following command:
+
+```bash
+$ git clone git@github.com:NeuraLegion/sectester-js-demo-broken-crystals.git
+```
+
+Navigate to your local version of this project. Then, in your command line, install the dependencies:
+
+```bash
+$ npm ci
+```
+
+The whole list of required variables to start the demo application is described in `.env.example` file. The template for this .env file is available in the root folder.
+
+After that, you can easily create a `.env` file from the template by issuing the following command:
+
+```bash
+$ cp .env.example .env
+```
+
+Once this template is done, copying over (should be instantaneous), navigate to your `.env` file, and paste your Bright API key as the value of the `BRIGHT_TOKEN` variable.
+
+```text
+BRIGHT_TOKEN = <your_API_key_here>
+```
+
+### Explore the demo application
+
+Once the initial setup is complete, you have to build and run services with Docker. Start Docker, and issue the command as follows:
+
+```bash
+$ docker compose up -d
+```
+
+While having the application running, open a browser and type `http://localhost:3000/swagger`, and hit enter.
+You should see the Swagger UI page for that application that allows you to test the RESTFul CRUD API, like in the following screenshot:
+
+![Swagger UI](https://user-images.githubusercontent.com/38690835/184880272-0ec59ac0-e200-454d-ae24-6deba4ec9a2e.png)
+
+To explore the Swagger UI:
+
+- Click on the `POST /api/render` endpoint
+- Click on the "Try it out" button
+- Click on the blue "Execute" button
+- Then you should see a view similar to the following, where you can see the JSON returned from the API:
+
+![Swagger UI](https://user-images.githubusercontent.com/38690835/184880763-e683ccf4-fc75-4b53-a305-4b1c1ba18ba2.png)
+
+### Run tests locally on the demo application
+
+You can start tests with SecTester against these endpoints as follows (make sure you use a new terminal window, as the original is still running the API for us!)
+
+```bash
+$ npm run test:sec
+```
+
+> You will find tests written with SecTester in the `./test/sec` folder.
+
+This can take a few minutes, and then you should see the result, like in the following screenshot:
+
+```text
+ FAIL  test/sec/render.e2e-spec.ts (143.608 s)
+  /api
+    POST /render
+      ✕ should not contain possibility to server-side code execution (282227 ms)
+
+  ● /api › POST /render › should not contain possibility to server-side code execution
+
+    IssueFound: Target is vulnerable
+
+    Issue in Bright UI:   https://development.playground.neuralegion.com/scans/bH2vd1CfxHtKjLNLxw94oj/issues/w68hhVa1We95UNZx4FmefT
+    Name:                 SSTI - Server Side Template Injection
+    Severity:             High
+    Remediation:
+    To protect against this type of attack, you shall sanitize input before passing to template directive and create a safe environment.
+    Details:
+    SSTI (Server Side Template Injection) is vulnerability that is exploited by malformed user input which allows embedding user input into different application without proper sanitization. The highest possibility of this vulnerability is to create a path for remote code execution capabilities and be exploited by malicious subjects. Identification of this vulnerability is possible with observation of the invalid syntax in the input with an error messages displayed after creating a response.
+    References:
+     ● https://www.owasp.org/index.php/Server-Side_Includes_(SSI)_Injection
+     ● https://www.owasp.org/images/7/7e/Owasp_SSTI_final.pdf
+
+      at SecScan.assert (../packages/runner/src/lib/SecScan.ts:59:13)
+          at runMicrotasks (<anonymous>)
+      at SecScan.run (../packages/runner/src/lib/SecScan.ts:37:7)
+      at Object.<anonymous> (sec/render.e2e-spec.ts:21:7)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        143.677 s
+Ran all test suites matching /render.e2e-spec.ts/i.
+```
+
+## Recommended tests
 
 |                                                                                  |                                                                                                                                              |                              |                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -400,28 +564,6 @@ Full documentation can be found in the [`@sectester/runner`](https://github.com/
 | **User ID Enumeration**                                                          | Tests if it is possible to collect valid user ID data by interacting with the target application                                             | `id_enumeration`             | - [Enumerable Integer-Based ID](https://docs.brightsec.com/docs/enumerable-integer-based-id)                                                                                                                                                                                                                                                                                                                                 |
 | **Version Control System Data Leak**                                             | Tests if it is possible to access Version Control System (VCS) resources                                                                     | `version_control_systems`    | - [Version Control System Data Leak](https://docs.brightsec.com/docs/version-control-system-data-leak)                                                                                                                                                                                                                                                                                                                       |
 | **XML External Entity Injection**                                                | Tests if various XML parameters are vulnerable to XML parsing of unauthorized external entities                                              | `xxe`                        | - [XML External Entity Injection](https://docs.brightsec.com/docs/xml-external-entity-injection)                                                                                                                                                                                                                                                                                                                             |
-
-### Example of a CI configuration
-
-You can integrate this library into any CI you use, for that you will need to add the `BRIGHT_TOKEN` ENV vars to your CI. Then add the following to your `github actions` configuration:
-
-```yaml
-steps:
-  - name: Run sec tests
-    run: npm run test:sec
-    env:
-      POSTGRES_USER: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      KEYCLOAK_DB_USER: ${{ secrets.KEYCLOAK_DB_USER }}
-      KEYCLOAK_DB_PASSWORD: ${{ secrets.KEYCLOAK_DB_PASSWORD }}
-      KEYCLOAK_USER: ${{ secrets.KEYCLOAK_USER }}
-      KEYCLOAK_PASSWORD: ${{ secrets.KEYCLOAK_PASSWORD }}
-      BRIGHT_TOKEN: ${{ secrets.BRIGHT_TOKEN }}
-      BRIGHT_HOSTNAME: app.neuralegion.com
-      BROKEN_CRYSTALS_URL: http://localhost:3000
-```
-
-For a full list of CI configuration examples, check out the docs below.
 
 ## Documentation & Help
 
