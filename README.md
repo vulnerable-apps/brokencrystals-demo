@@ -7,7 +7,6 @@
 - [Initial setup](#initial-setup)
   - [Fork this repo](#fork-this-repo)
   - [Get a Bright API key](#get-a-bright-api-key)
-- [A full configuration example](#a-full-configuration-example)
 - [Running in a CI pipeline](#running-in-a-ci-pipeline)
   - [GitHub Actions setup](#github-actions-setup)
   - [Using with GitHub Actions](#using-with-github-actions)
@@ -15,6 +14,7 @@
   - [Local setup](#local-setup)
   - [Explore the demo application](#explore-the-demo-application)
   - [Run tests locally on the demo application](#run-tests-locally-on-the-demo-application)
+- [A full configuration example](#a-full-configuration-example)
 - [Recommended tests](#recommended-tests)
 - [Documentation & Help](#documentation--help)
 - [Contributing](#contributing)
@@ -26,21 +26,21 @@ This is a demo project for the [SecTester JS SDK framework](https://github.com/N
 
 ## About SecTester
 
-Bright is a developer-first Dynamic Application Security Testing (DAST) scanner.
+Bright is a developer-first Dynamic Application Security Testing (DAST) platform.
 
-SecTester is a new tool that integrates our enterprise-grade scan engine directly into your unit tests.
+SecTester is a new open-source tool that integrates our enterprise-grade scan engine directly into your unit tests, integration tests, e2e tests or whichever automated tests you use.
 
 With SecTester you can:
 
-- Test every function and component directly
+- Test every function and component directly with our DAST engine
 - Run security scans at the speed of unit tests
-- Find vulnerabilities with no false positives, before you finalize your Pull Request
+- Find vulnerabilities with no false positives, before you finalize your pull request
 
 Trying out Bright’s SecTester is _**free**_ 💸, so let’s get started!
 
 > ⚠️ **Disclaimer**
 >
-> The SecTester project is currently in beta as an early-access tool. We are looking for your feedback to make it the best possible solution for developers, aimed to be used as part of your team’s SDLC. We apologize if not everything will work smoothly from the start, and hope a few bugs or missing features will be no match for you!
+> The SecTester project is currently in beta as an early-access tool. We are looking for your feedback to make it the best possible solution for developers, aimed to be used as part of your team’s SDLC. We apologize if not everything will work smoothly from the start, but we are constantly improving!
 >
 > Thank you! We appreciate your help and feedback!
 
@@ -48,13 +48,13 @@ Trying out Bright’s SecTester is _**free**_ 💸, so let’s get started!
 
 ### Fork this repo
 
-1.  Press the ‘fork’ button to make a copy of this repo in your own GH account
+1.  Press the ‘fork’ button to make a copy of this repo in your own GitHub account
 
 ### Get a Bright API key
 
 1.  Register for a free account at Bright’s [**signup**](https://app.neuralegion.com/signup) page
-2.  Optional: Skip the quickstart wizard and go directly to [**User API key creation**](https://app.neuralegion.com/profile)
-3.  Create a Bright API key ([**check out our doc on how to create a user key**](https://docs.brightsec.com/docs/manage-your-personal-account#manage-your-personal-api-keys-authentication-tokens))
+2.  Skip the quickstart wizard and go directly to [**User API key creation**](https://app.neuralegion.com/profile)
+3.  Create a Bright API key ([**check out our docs on how to create a user key**](https://docs.brightsec.com/docs/manage-your-personal-account#manage-your-personal-api-keys-authentication-tokens))
 4.  Save the Bright API key
     1.  For this demo, we recommend using your Github repository secrets feature to store the key, accessible via the `Settings > Security > Secrets > Actions` configuration. We use the ENV variable called `BRIGHT_TOKEN` in our examples
     2.  If you don’t use that option, make sure you save the key in a secure location. You will need to access it later on in the project but will not be able to view it again.
@@ -62,230 +62,16 @@ Trying out Bright’s SecTester is _**free**_ 💸, so let’s get started!
 
 > ⚠️ Make sure your API key is saved in a location where you can retrieve it later! You will need it in these next steps!
 
-## A full configuration example
-
-Let’s look under the hood to see how this all works. In the following example, we will test the app we just set up for any instances of Server Side Template Injection. [Jest](https://github.com/facebook/jest) is provided as the testing framework, that provides assert functions and test-double utilities that help with mocking, spying, etc.
-
-The [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) package provides a set of utilities that allows scanning the demo application for vulnerabilities. Let's expand the previous example using the built-in `SecRunner` class:
-
-[`test/sec/render.e2e-spec.ts`](./test/sec/render.e2e-spec.ts)
-
-```ts
-let runner!: SecRunner;
-
-// ...
-
-beforeEach(async () => {
-  runner = new SecRunner({ hostname: 'app.neuralegion.com' });
-
-  await runner.init();
-});
-
-afterEach(() => runner.clear());
-```
-
-To set up a runner, create a `SecRunner` instance on the top of the file, passing a configuration as follows:
-
-```ts
-import { SecRunner } from '@sectester/runner';
-
-const runner = new SecRunner({ hostname: 'app.neuralegion.com' });
-```
-
-After that, you have to initialize a `SecRunner` instance:
-
-```ts
-await runner.init();
-```
-
-The runner is now ready to perform your tests. To start scanning your endpoint, first, you have to create a `SecScan` instance. We do this with `runner.createScan` as shown in the example below.
-
-Now, you will write and run your first unit test!
-
-Let's verify the `POST /api/render` endpoint for SSTI:
-
-```ts
-describe('POST /render', () => {
-  it('should not contain possibility to server-side code execution', async () => {
-    await runner
-      .createScan({
-        tests: [TestType.SSTI]
-      })
-      .run({
-        method: 'POST',
-        headers: {
-          'accept': 'application/json, text/plain, */*',
-          'origin': process.env.BROKEN_CRYSTALS_URL!,
-          'content-type': 'text/plain'
-        },
-        body: `Some text`,
-        url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
-      });
-  });
-});
-```
-
-This will raise an exception when the test fails, with remediation information and a deeper explanation of SSTI, right in your command line!
-
-Let's look at another test for the `GET /api/spawn` endpoint, this time for OSI.
-
-```ts
-describe('GET /spawn', () => {
-  it('should not be able to execute shell commands on the host operating system', async () => {
-    await runner
-      .createScan({
-        tests: [TestType.OSI]
-      })
-      .run({
-        method: 'GET',
-        url: `${process.env.BROKEN_CRYSTALS_URL}/api/spawn?command=pwd`
-      });
-  });
-});
-```
-
-As you can see, writing a new test for OSI follows the same pattern as SSTI.
-
-By default, each found issue will cause the scan to stop. To control this behavior you can set a severity threshold using the `threshold` method. Since SSTI (Server Side Template Injection) is considered to be high severity issue, we can pass `Severity.HIGH` for stricter checks:
-
-```ts
-scan.threshold(Severity.HIGH);
-```
-
-To avoid long-running test, you can specify a timeout, to say how long to wait before aborting it:
-
-```ts
-scan.timeout(300000);
-```
-
-To make sure that Jest won't abort tests early, you should align a test timeout with a scan timeout as follows:
-
-```ts
-jest.setTimeout(300000);
-```
-
-To clarify an attack surface and speed up the test, we suggest making clear where to discover parameters according to the source code.
-
-[`src/app.controller.ts`](https://github.com/NeuraLegion/brokencrystals/blob/master/src/app.controller.ts)
-
-```ts
-@Controller('/api')
-@ApiTags('App controller')
-export class AppController {
-  constructor(private readonly usersService: UsersService) {}
-
-  @Post('render')
-  @ApiProduces('text/plain')
-  @ApiConsumes('text/plain')
-  @ApiOperation({
-    description: SWAGGER_DESC_RENDER_REQUEST
-  })
-  @ApiBody({ description: 'Write your text here' })
-  @ApiCreatedResponse({
-    description: 'Rendered result'
-  })
-  async renderTemplate(@Body() raw): Promise<string> {
-    if (typeof raw === 'string' || Buffer.isBuffer(raw)) {
-      const text = raw.toString().trim();
-      const res = dotT.compile(text)();
-      this.logger.debug(`Rendered template: ${res}`);
-      return res;
-    }
-  }
-
-  // ...
-}
-```
-
-For the example above, it should look like this:
-
-```ts
-const scan = runner.createScan({
-  tests: [TestType.SSTI],
-  attackParamLocations: [AttackParamLocation.BODY]
-});
-```
-
-Finally, the test should look like this:
-
-```ts
-it('should not contain possibility to server-side code execution', async () => {
-  await runner
-    .createScan({
-      tests: [TestType.SSTI],
-      attackParamLocations: [AttackParamLocation.BODY]
-    })
-    .timeout(300000)
-    .threshold(Severity.HIGH)
-    .run({
-      method: 'POST',
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'origin': process.env.BROKEN_CRYSTALS_URL!,
-        'content-type': 'text/plain'
-      },
-      body: `Some text`,
-      url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
-    });
-});
-```
-
-Here is a completed `test/sec/render.e2e-spec.ts` file with all the tests and configuration set up.
-
-```ts
-import { SecRunner } from '@sectester/runner';
-import { AttackParamLocation, TestType } from '@sectester/scan';
-
-describe('/api', () => {
-  const timeout = 300000;
-  jest.setTimeout(timeout);
-  let runner!: SecRunner;
-
-  beforeEach(() => {
-    runner = new SecRunner({ hostname: process.env.BRIGHT_HOSTNAME! });
-
-    return runner.init();
-  });
-
-  afterEach(() => runner.clear());
-
-  describe('POST /render', () => {
-    it('should not contain possibility to server-side code execution', async () => {
-      await runner
-        .createScan({
-          tests: [TestType.SSTI],
-          name: expect.getState().currentTestName,
-          attackParamLocations: [AttackParamLocation.BODY]
-        })
-        .timeout(timeout)
-        .threshold(Severity.HIGH)
-        .run({
-          method: 'POST',
-          headers: {
-            'accept': 'application/json, text/plain, */*',
-            'origin': process.env.BROKEN_CRYSTALS_URL!,
-            'content-type': 'text/plain'
-          },
-          body: `Some text`,
-          url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
-        });
-    });
-  });
-});
-```
-
-Full documentation can be found in the [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) README.
-
 ## Running in a CI pipeline
 
-Once you create your own unit tests using [SecTester](https://github.com/NeuraLegion/sectester-js), you can run it in any CI you choose, to simplify things in this demo we provide an example using the GitHub Actions CI.
+Once you create your own unit tests using [SecTester](https://github.com/NeuraLegion/sectester-js), you can run it in any CI you choose. To simplify things in this demo we provide an example using the GitHub Actions CI.
 
 ### GitHub Actions setup
 
 1.  After forking the main repo, you will need to go to the `Actions` tab and click on the `I understand my workflows, go ahead an enable them` button. This will enable you to run the pre-configured CI example from this demo
-2.  Next, add your `BRIGHT_TOKEN` to the GitHub Actions environment variables via the [Secret Variables](https://docs.github.com/en/actions/reference/encrypted-secrets), accessible via the `Settings > Security > Secrets > Actions` configuration. Please make sure that the ENV variable is called `BRIGHT_TOKEN` as that is what we use in our example
+2.  Next, add your `BRIGHT_TOKEN` to the GitHub Actions environment variables via the [Secret Variables](https://docs.github.com/en/actions/reference/encrypted-secrets), accessible via the `Settings > Security > Secrets > Actions` configuration. Please make sure that the ENV variable is called `BRIGHT_TOKEN`, as that is what we use in our example
 
-> You can integrate this library into any CI you use, for that you will need to add the `BRIGHT_TOKEN` ENV vars to your CI.
+> You can integrate [SecTester](https://github.com/NeuraLegion/sectester-js) into any CI you use. For that, you will need to add the `BRIGHT_TOKEN` ENV vars to your CI.
 
 ### Using with GitHub Actions
 
@@ -428,13 +214,13 @@ Alternatively to running the tests in the CI, you can run the tests locally on y
 
 To begin, clone your forked repo of this project onto your local machine.
 
-To do that, navigate to your in your folder of choice and clone the project using either SSH or HTTP, for example using the following command:
+To do that, navigate to **your local folder of choice** and clone the project using either SSH or HTTP, for example using the following command:
 
 ```bash
-$ git clone git@github.com:NeuraLegion/sectester-js-demo-broken-crystals.git
+$ git clone git@github.com:my-github-handle/sectester-js-demo-broken-crystals.git
 ```
 
-Navigate to your local version of this project. Then, in your command line, install the dependencies:
+In the same local folder, using your command line, install the dependencies:
 
 ```bash
 $ npm ci
@@ -442,13 +228,13 @@ $ npm ci
 
 The whole list of required variables to start the demo application is described in `.env.example` file. The template for this .env file is available in the root folder.
 
-After that, you can easily create a `.env` file from the template by issuing the following command:
+You can easily create a `.env` file from the template by issuing the following command:
 
 ```bash
 $ cp .env.example .env
 ```
 
-Once this template is done, copying over (should be instantaneous), navigate to your `.env` file, and paste your Bright API key as the value of the `BRIGHT_TOKEN` variable.
+Once this template is done copying over (should be instantaneous), navigate to your `.env` file, and paste your Bright API key as the value of the `BRIGHT_TOKEN` variable.
 
 ```text
 BRIGHT_TOKEN = <your_API_key_here>
@@ -463,6 +249,7 @@ $ docker compose up -d
 ```
 
 While having the application running, open a browser and type `http://localhost:3000/swagger`, and hit enter.
+
 You should see the Swagger UI page for that application that allows you to test the RESTFul CRUD API, like in the following screenshot:
 
 ![Swagger UI](https://user-images.githubusercontent.com/38690835/184880272-0ec59ac0-e200-454d-ae24-6deba4ec9a2e.png)
@@ -486,7 +273,7 @@ $ npm run test:sec
 
 > You will find tests written with SecTester in the `./test/sec` folder.
 
-This can take a few minutes, and then you should see the result, like in the following screenshot:
+This can take a few minutes while the Bright engine spins up. After a moment, you should see the result:
 
 ```text
  FAIL  test/sec/render.e2e-spec.ts (143.608 s)
@@ -520,6 +307,220 @@ Snapshots:   0 total
 Time:        143.677 s
 Ran all test suites matching /render.e2e-spec.ts/i.
 ```
+
+## A full configuration example
+
+Let’s look under the hood to see how this all works. In the following example, we will test the app we just set up for any instances of Server Side Template Injection. [Jest](https://github.com/facebook/jest) is provided as the testing framework, that provides assert functions and test-double utilities that help with mocking, spying, etc.
+
+The [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) package provides a set of utilities that allows scanning the demo application for vulnerabilities. Let's expand the previous example using the built-in `SecRunner` class:
+
+[`test/sec/render.e2e-spec.ts`](./test/sec/render.e2e-spec.ts)
+
+```ts
+let runner!: SecRunner;
+
+// ...
+
+beforeEach(async () => {
+  runner = new SecRunner({ hostname: 'app.neuralegion.com' });
+
+  await runner.init();
+});
+
+afterEach(() => runner.clear());
+```
+
+To set up a runner, create a `SecRunner` instance on the top of the file, passing a configuration as follows:
+
+```ts
+import { SecRunner } from '@sectester/runner';
+
+const runner = new SecRunner({ hostname: 'app.neuralegion.com' });
+```
+
+After that, you have to initialize a `SecRunner` instance:
+
+```ts
+await runner.init();
+```
+
+The runner is now ready to perform your tests. To start scanning your endpoint, first, you have to create a `SecScan` instance. We do this with `runner.createScan` as shown in the example below.
+
+Now, you will write and run your first unit test!
+
+Let's verify the `POST /api/render` endpoint for SSTI (read more in [our docs](https://docs.brightsec.com/docs/server-side-template-injection-ssti)):
+
+```ts
+describe('POST /render', () => {
+  it('should not contain possibility to server-side code execution', async () => {
+    await runner
+      .createScan({
+        tests: [TestType.SSTI]
+      })
+      .run({
+        method: 'POST',
+        headers: {
+          'accept': 'application/json, text/plain, */*',
+          'origin': process.env.BROKEN_CRYSTALS_URL!,
+          'content-type': 'text/plain'
+        },
+        body: `Some text`,
+        url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
+      });
+  });
+});
+```
+
+This will raise an exception when the test fails, with remediation information and a deeper explanation of SSTI, right in your command line!
+
+Let's look at another test for the `GET /api/spawn` endpoint, this time for OSI (read more in [our docs](https://docs.brightsec.com/docs/os-command-injection)).
+
+```ts
+describe('GET /spawn', () => {
+  it('should not be able to execute shell commands on the host operating system', async () => {
+    await runner
+      .createScan({
+        tests: [TestType.OSI]
+      })
+      .run({
+        method: 'GET',
+        url: `${process.env.BROKEN_CRYSTALS_URL}/api/spawn?command=pwd`
+      });
+  });
+});
+```
+
+As you can see, writing a new test for OSI follows the same pattern as SSTI.
+
+By default, each found issue will cause the scan to stop. To control this behavior you can set a severity threshold using the `threshold` method. Since SSTI (Server Side Template Injection) is considered to be high severity issue, we can pass `Severity.HIGH` for stricter checks:
+
+```ts
+scan.threshold(Severity.HIGH);
+```
+
+To avoid long-running test, you can specify a timeout, to say how long to wait before aborting it:
+
+```ts
+scan.timeout(300000);
+```
+
+To make sure that Jest won't abort tests early, you should align a test timeout with a scan timeout as follows:
+
+```ts
+jest.setTimeout(300000);
+```
+
+To clarify an attack surface and speed up the test, we suggest making clear where to discover the parameters according to the source code.
+
+[`src/app.controller.ts`](https://github.com/NeuraLegion/brokencrystals/blob/master/src/app.controller.ts)
+
+```ts
+@Controller('/api')
+@ApiTags('App controller')
+export class AppController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Post('render')
+  @ApiProduces('text/plain')
+  @ApiConsumes('text/plain')
+  @ApiOperation({
+    description: SWAGGER_DESC_RENDER_REQUEST
+  })
+  @ApiBody({ description: 'Write your text here' })
+  @ApiCreatedResponse({
+    description: 'Rendered result'
+  })
+  async renderTemplate(@Body() raw): Promise<string> {
+    if (typeof raw === 'string' || Buffer.isBuffer(raw)) {
+      const text = raw.toString().trim();
+      const res = dotT.compile(text)();
+      this.logger.debug(`Rendered template: ${res}`);
+      return res;
+    }
+  }
+
+  // ...
+}
+```
+
+For the example above, it should look like this:
+
+```ts
+const scan = runner.createScan({
+  tests: [TestType.SSTI],
+  attackParamLocations: [AttackParamLocation.BODY]
+});
+```
+
+Finally, the test should look like this:
+
+```ts
+it('should not contain possibility to server-side code execution', async () => {
+  await runner
+    .createScan({
+      tests: [TestType.SSTI],
+      attackParamLocations: [AttackParamLocation.BODY]
+    })
+    .timeout(300000)
+    .threshold(Severity.HIGH)
+    .run({
+      method: 'POST',
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'origin': process.env.BROKEN_CRYSTALS_URL!,
+        'content-type': 'text/plain'
+      },
+      body: `Some text`,
+      url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
+    });
+});
+```
+
+Here is a completed `test/sec/render.e2e-spec.ts` file with all the tests and configuration set up.
+
+```ts
+import { SecRunner } from '@sectester/runner';
+import { AttackParamLocation, TestType } from '@sectester/scan';
+
+describe('/api', () => {
+  const timeout = 300000;
+  jest.setTimeout(timeout);
+  let runner!: SecRunner;
+
+  beforeEach(() => {
+    runner = new SecRunner({ hostname: process.env.BRIGHT_HOSTNAME! });
+
+    return runner.init();
+  });
+
+  afterEach(() => runner.clear());
+
+  describe('POST /render', () => {
+    it('should not contain possibility to server-side code execution', async () => {
+      await runner
+        .createScan({
+          tests: [TestType.SSTI],
+          name: expect.getState().currentTestName,
+          attackParamLocations: [AttackParamLocation.BODY]
+        })
+        .timeout(timeout)
+        .threshold(Severity.HIGH)
+        .run({
+          method: 'POST',
+          headers: {
+            'accept': 'application/json, text/plain, */*',
+            'origin': process.env.BROKEN_CRYSTALS_URL!,
+            'content-type': 'text/plain'
+          },
+          body: `Some text`,
+          url: `${process.env.BROKEN_CRYSTALS_URL}/api/render`
+        });
+    });
+  });
+});
+```
+
+Full documentation can be found in the [`@sectester/runner`](https://github.com/NeuraLegion/sectester-js/tree/master/packages/runner) README.
 
 ## Recommended tests
 
