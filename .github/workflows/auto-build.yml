@@ -7,6 +7,8 @@ on:
 
 jobs:
   build-and-test:
+    # This workflow is only of value to the NeuraLegion/sectester-js-demo-broken-crystals repository
+    if: github.repository == 'NeuraLegion/sectester-js-demo-broken-crystals'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
