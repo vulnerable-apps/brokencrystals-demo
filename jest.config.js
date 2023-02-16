@@ -3,18 +3,17 @@ const { pathsToModuleNameMapper } = require('ts-jest');
 
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
-  globals: {
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.json',
-      isolatedModules: true
-    }
-  },
   transform: {
-    '^.+\\.[tj]sx?$': 'ts-jest'
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        diagnostics: false,
+        isolatedModules: true
+      }
+    ]
   },
-  maxWorkers: '25%',
+  maxWorkers: '2',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   coverageDirectory: '<rootDir>/coverage',
   testPathIgnorePatterns: ['<rootDir>/node_modules/'],
