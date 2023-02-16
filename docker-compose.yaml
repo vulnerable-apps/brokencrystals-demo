@@ -7,7 +7,7 @@ services:
     healthcheck:
       interval: 5s
       retries: 10
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/config"]
       timeout: 30s
     environment:
       DATABASE_HOST: postgres
