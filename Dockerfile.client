@@ -1,0 +1,2 @@
+FROM neuralegion/brokencrystals-client
+COPY ./conf/nginx.conf /etc/nginx/nginx.conf
